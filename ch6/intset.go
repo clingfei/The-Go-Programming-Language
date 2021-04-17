@@ -6,9 +6,10 @@ import (
 )
 
 type IntSet struct {
-	words []uint64
+	words []uint
 }
 
+const base = 32 << (^uint(0) >> 63)
 var pc [256]byte
 
 func init() {
@@ -18,13 +19,13 @@ func init() {
 }
 
 func (s *IntSet) Has(x int) bool {
-	word, bit := x/64, uint(x%64)
+	word, bit := x/base, uint(x%base)
 	return word < len(s.words) && s.words[word]&(1<<bit) != 0
 }
 
 //Add addds the non-negative  value x to the set
 func (s *IntSet) Add(x int) {
-	word, bit := x/64, uint(x%64)
+	word, bit := x/base, uint(x%base)
 	for word >= len(s.words) {
 		s.words = append(s.words, 0)
 	}
@@ -87,12 +88,12 @@ func (s *IntSet) String() string {
 		if word == 0 {
 			continue
 		}
-		for j := 0; j < 64; j++ {
+		for j := 0; j < base; j++ {
 			if word&(1<<uint(j)) != 0 {
 				if buf.Len() > len("{") {
 					buf.WriteByte(' ')
 				}
-				fmt.Fprintf(&buf, "%d", 64*i+j)
+				fmt.Fprintf(&buf, "%d", base*i+j)
 			}
 		}
 	}
@@ -110,7 +111,7 @@ func (s *IntSet) Len() (result int) {
 
 //remove x from the set
 func (s *IntSet) Remove(x int) {
-	word, bit := x/64, uint64(x%64)
+	word, bit := x/base, uint(x%base)
 	if word >= len(s.words) {
 		fmt.Printf("Error, there is not element %v\n", x)
 	} else {
@@ -126,15 +127,15 @@ func (s *IntSet) Clear() {
 //return a copy of the set
 func (s *IntSet) Copy() *IntSet {
 	var result IntSet
-	result.words = make([]uint64, len(s.words))
+	result.words = make([]uint, len(s.words))
 	for i := 0; i < len(s.words); i++ {
 		result.words[i] = s.words[i]
 	}
 	return &result
 }
 
-//count the number of 1 in uint64 element
-func popCount(x uint64) int {
+//count the number of 1 in uint element
+func popCount(x uint) int {
 	return  int(pc[byte(x>>(0*8))] +
 		pc[byte(x>>(1*8))] +
 		pc[byte(x>>(2*8))] +
@@ -173,6 +174,4 @@ func main() {
 	fmt.Println(x.String())
 	x.SymmetricDifference(&y)
 	fmt.Println(x.String())
-
-
 }
