@@ -77,8 +77,7 @@ func (s *IntSet) Remove(x int) {
 	if word >= len(s.words) {
 		fmt.Printf("Error, there is not element %v\n", x)
 	} else {
-		fmt.Println(word)
-		s.words[word+1] ^= bit
+		s.words[word] ^= (1<<bit)
 	}
 }
 
@@ -98,15 +97,15 @@ func (s *IntSet) Copy() *IntSet {
 }
 
 //count the number of 1 in uint64 element
-func popCount(n uint64) int {
-	return int(pc[byte(n>>0*8)] +
-		pc[byte(n>>1*8)] +
-		pc[byte(n>>2*8)] +
-		pc[byte(n>>3*8)] +
-		pc[byte(n>>4*8)] +
-		pc[byte(n>>5*8)] +
-		pc[byte(n>>6*8)] +
-		pc[byte(n>>7*8)])
+func popCount(x uint64) int {
+	return  int(pc[byte(x>>(0*8))] +
+		pc[byte(x>>(1*8))] +
+		pc[byte(x>>(2*8))] +
+		pc[byte(x>>(3*8))] +
+		pc[byte(x>>(4*8))] +
+		pc[byte(x>>(5*8))] +
+		pc[byte(x>>(6*8))] +
+		pc[byte(x>>(7*8))])
 }
 
 func main() {
