@@ -22,7 +22,7 @@ func (s *IntSet) Has(x int) bool {
 	return word < len(s.words) && s.words[word]&(1<<bit) != 0
 }
 
-
+//Add addds the non-negative  value x to the set
 func (s *IntSet) Add(x int) {
 	word, bit := x/64, uint(x%64)
 	for word >= len(s.words) {
@@ -31,15 +31,52 @@ func (s *IntSet) Add(x int) {
 	s.words[word] |= 1 << bit
 }
 
+//Add a slice of the non-negative value to the set
+func (s *IntSet)AddAll(words ...int) {
+	for _, i := range words {
+		s.Add(i)
+	}
+}
+
+//IntersectWith sets s to the intersect  of s and t
+func (s *IntSet) IntersectWith(t *IntSet) {
+	if len(s.words) > len(t.words) {
+		s.words = s.words[:len(t.words)]
+	}
+	for i, tword := range t.words {
+		if i < len(s.words) {
+			s.words[i] &= tword
+		}
+	}
+}
+
 //UnionWith sets s to the union of s and t
 func (s *IntSet) UnionWith(t *IntSet) {
 	for i, tword := range t.words {
-		if i< len(s.words) {
+		if i < len(s.words) {
 			s.words[i] |= tword
 		} else {
 			s.words = append(s.words, tword)
 		}
 	}
+}
+
+//DifferenceWith sets s to the difference of s and t
+func (s *IntSet) DifferenceWith(t *IntSet) {
+	for i, tword := range t.words {
+		if i < len(s.words){
+			s.words[i] ^= s.words[i]&tword
+		}
+	}
+}
+func (s *IntSet) SymmetricDifference(t *IntSet) {
+	var s1 IntSet
+	for _, v := range s.words{
+		s1.words = append(s1.words, v)
+	}
+	s.UnionWith(t)
+	s1.IntersectWith(t)
+	s.DifferenceWith(&s1)
 }
 
 //String returns the set as a string of the form "{1,2,3}"
@@ -113,17 +150,29 @@ func main() {
 	x.Add(1)
 	x.Add(14)
 	x.Add(9)
-	fmt.Println(x.String())
-	r := x.Copy()
-	fmt.Println(r.String())
-	x.Remove(14)
-	fmt.Println(x.String())
-	fmt.Println(x.Len())
-	x.Clear()
-	fmt.Println(x.String())
+	x.AddAll(3, 4, 5)
+	//fmt.Println(x.String())
+	//r := x.Copy()
+	//fmt.Println(r.String())
+	//x.Remove(14)
+	//fmt.Println(x.String())
+	//fmt.Println(x.Len())
+	//x.Clear()
+	//fmt.Println(x.String())
 	y.Add(9)
 	y.Add(42)
-	x.UnionWith(&y)
 	fmt.Println(x.String())
-	fmt.Println(x.Has(9), x.Has(123))
+
+	x.IntersectWith(&y)
+	fmt.Println(x.String())
+	x.AddAll(9, 43, 58)
+	fmt.Println(x.String())
+	x.DifferenceWith(&y)
+	fmt.Println(x.String())
+	x.AddAll(10, 34, 9, 42)
+	fmt.Println(x.String())
+	x.SymmetricDifference(&y)
+	fmt.Println(x.String())
+
+
 }
