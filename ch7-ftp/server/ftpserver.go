@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -8,6 +9,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 )
 
@@ -28,34 +30,43 @@ func main() {
 }
 
 func buildConn(c net.Conn) {
-	fmt.Fprintf(c, "Connection built")
+	fmt.Fprintf(c, "Connection built.\n")
 }
 
 func handleConn(c net.Conn) {
 	defer c.Close()
-	var buf [512]byte
 	buildConn(c)
 	curDir := getDir()
-	for {
-		n, err := c.Read(buf[0:])
-
-		if err != nil {
-			fmt.Println(err)
-			return
-		} else {
-			s := string(buf[0 : n-2])
-			fmt.Println(s)
-			context := strings.Fields(s)
-			switch context[0] {
-			case "cd" : handleCd(c, context[1], &curDir)
+	sc := bufio.NewScanner(c)
+	for sc.Scan(){
+		fmt.Println(sc.Text())
+		args := strings.Fields(sc.Text())
+		switch args[0] {
+			case "cd" : handleCd(c, args[1], &curDir)
 			case "ls" :	handleLs(c, curDir)
-			case "get" : handleGet(c, context[1], curDir)
-			case "send" : handleSend(c, context[1])
-			}
+			case "get" : handleGet(c, args[1], curDir)
+			case "send" :
+				filename := args[1]
+				n, _ := strconv.Atoi(args[2])
+				file, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE, 777)
+				if err != nil {
+					fmt.Println(err)
+				}
+				for n >= 0 && sc.Scan(){
+					fmt.Printf("%s", sc.Text())
+					n--
+					fmt.Fprintf(file, "%s", sc.Text())
+					fmt.Fprintf(file, "%s", '\n')
+				}
+				file.Close()
+				fmt.Fprintln(c, "Transfer successfully!")
+			case "close": return
+		default : fmt.Fprintln(c, "Error!Undefined operation.")
 		}
 	}
 }
 
+// Handle Get Operation
 func handleGet(dst io.Writer, file string, dir string) {
 	var path string
 	if file[:2] != "C:" && file[:2] != "D:" {
@@ -80,10 +91,7 @@ func handleGet(dst io.Writer, file string, dir string) {
 	}
 }
 
-func handleSend(dst io.Writer, file string) {
-
-}
-
+// Handle ls operation
 func handleLs(dst io.Writer, curDir string) {
 	ls, err := listFile(curDir)
 	if err != nil {
@@ -93,6 +101,8 @@ func handleLs(dst io.Writer, curDir string) {
 	}
 }
 
+
+// Handle cd operation
 func handleCd(dst io.Writer, dir string, curDir *string) {
 	if dir[:2] == "C:" || dir[:2] == "D:" {
 		list, err := listFile(dir)
@@ -113,12 +123,19 @@ func handleCd(dst io.Writer, dir string, curDir *string) {
 		} else if dir == "." {
 			//handleLs(dst, *curDir)
 		} else {
-			(*curDir) = (*curDir) + "\\" + dir
+			path := (*curDir) + "\\" + dir
+			_, err := listFile(path)
+			if err != nil {
+				sendLs(dst, []string{"Error, directory not found."})
+			} else {
+				(*curDir) = (*curDir) + "\\" + dir
+			}
 			//handleLs(dst, *curDir)
 		}
 	}
 }
 
+// Return the list of file specified
 func listFile(dir string) ([]string, error) {
 	files, err := ioutil.ReadDir(dir)
 	if err != nil {
@@ -135,6 +152,7 @@ func listFile(dir string) ([]string, error) {
 	return result, nil
 }
 
+// Get the current dir of exe
 func getDir() string {
 	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
 	if err != nil {
@@ -143,6 +161,7 @@ func getDir() string {
 	return  dir
 }
 
+// Send the list of file to client
 func sendLs(dst io.Writer, list []string) {
 	for _, file := range list {
 		io.WriteString(dst, file+"\n")
