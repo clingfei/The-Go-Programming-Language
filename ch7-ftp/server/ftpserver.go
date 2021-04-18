@@ -44,7 +44,7 @@ func handleConn(c net.Conn) {
 		switch args[0] {
 			case "cd" : handleCd(c, args[1], &curDir)
 			case "ls" :	handleLs(c, curDir)
-			case "get" : handleGet(c, args[1], curDir)
+			case "get" : handleGet(c, args[1])
 			case "send" :
 				filename := args[1]
 				n, _ := strconv.Atoi(args[2])
@@ -67,27 +67,24 @@ func handleConn(c net.Conn) {
 }
 
 // Handle Get Operation
-func handleGet(dst io.Writer, file string, dir string) {
-	var path string
-	if file[:2] != "C:" && file[:2] != "D:" {
-		path = dir + "\\" + file
-	} else {
-		path = file
-		for i := len(file)-1; i>=0; i-- {
-			if file[i] == '\\' {
-				file = file[i:]
-				break
-			}
-		}
-	}
-	fileObj, err := os.Open(path)
-	if err != nil {
+func handleGet(dst io.Writer, file string) {
+	if data, err := ioutil.ReadFile(file); err != nil {
+		fmt.Fprintln(dst, "Error")
 		fmt.Fprintln(dst, err)
-		fmt.Fprintf(dst, "Error, read failed.\n")
 	} else {
-		io.WriteString(dst, "ok")
-		io.WriteString(dst, file + "\n")
-		io.Copy(dst, fileObj)
+		fmt.Println(data)
+		n := countLines(string(data))
+		fmt.Println(n)
+		fmt.Fprintln(dst, n)
+		fmt.Fprintln(dst, n)
+		fmt.Fprintln(dst, string(data))
+	}
+	data, err := ioutil.ReadFile(file)
+	fmt.Fprintln(dst, file)
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		fmt.Fprintln(dst, string(data))
 	}
 }
 
@@ -166,4 +163,15 @@ func sendLs(dst io.Writer, list []string) {
 	for _, file := range list {
 		io.WriteString(dst, file+"\n")
 	}
+}
+
+// Return the lines of file to client
+func countLines(data string) (result int) {
+	result = 0
+	for  _, v := range data {
+		if v == '\n' {
+			result++
+		}
+	}
+	return result
 }

@@ -8,6 +8,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -17,7 +18,7 @@ func main() {
 		log.Fatal(err)
 	}
 	defer conn.Close()
-	go mustRead(os.Stdout, conn)
+	go mustCopy(os.Stdout, conn)
 	sc := bufio.NewScanner(os.Stdin)
 	for sc.Scan() {
 		args := strings.Fields(sc.Text())
@@ -26,7 +27,28 @@ func main() {
 		}
 		cmd := args[0]
 		switch cmd {
-		case "ls", "cd", "get": if _, err := fmt.Fprintln(conn, sc.Text()); err != nil {return}
+		case "ls", "cd": if _, err := fmt.Fprintln(conn, sc.Text()); err != nil {return}
+		case "get": if _, err := fmt.Fprintln(conn, sc.Text()); err != nil {break}
+					file, _ := os.OpenFile(args[1], os.O_CREATE | os.O_RDWR, 0644)
+					scanner := bufio.NewScanner(conn)
+					scanner.Scan()
+					flag := scanner.Text()
+					if flag == "Error" {
+						scanner.Scan()
+						break
+					} else {
+						n, _ := strconv.Atoi(flag)
+						for i := 0; i <= n && scanner.Scan(); i++ {
+							//fmt.Println(scanner.Text())
+							_, err := fmt.Fprintln(file, scanner.Text())
+							if err !=nil {
+								fmt.Println(err)
+							}
+						}
+					}
+					file.Close()
+
+
 		case "send": if len(args) < 2 {
 						fmt.Println("Not enough arguments.")
 					} else {
@@ -52,21 +74,7 @@ func mustCopy(dst io.Writer, src io.Reader) {
 	}
 }
 
-func mustRead(dst io.Writer, src io.Reader) {
-	io.Copy(dst, src)
-}
-
-func getFile(buffer []byte) {
-	filename := os.Args[1]
-	fmt.Println(filename)
-	err := ioutil.WriteFile("D:\\Go_workspace\\src\\The-Go-Programming-Language\\"+"file.txt", buffer[:], 777)	//创建文件并写入
-	if err != nil {
-		log.Println(err)
-	} else {
-		log.Println("Get Successfully!")
-	}
-}
-
+// Return the lines of file
 func countLines(data string) (result int) {
 	result = 0
 	for  _, v := range data {
