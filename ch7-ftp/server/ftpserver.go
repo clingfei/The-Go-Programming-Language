@@ -13,6 +13,8 @@ import (
 	"strings"
 )
 
+var rootDir string;
+
 func main() {
 	listener, err := net.Listen("tcp", "localhost:8080")
 	if err != nil {
@@ -37,12 +39,13 @@ func handleConn(c net.Conn) {
 	defer c.Close()
 	buildConn(c)
 	curDir := getDir()
+	root := curDir
 	sc := bufio.NewScanner(c)
 	for sc.Scan(){
 		fmt.Println(sc.Text())
 		args := strings.Fields(sc.Text())
 		switch args[0] {
-			case "cd" : handleCd(c, args[1], &curDir)
+			case "cd" : handleCd(c, args[1], &curDir, root)
 			case "ls" :	handleLs(c, curDir)
 			case "get" : handleGet(c, args[1])
 			case "send" :
@@ -100,35 +103,31 @@ func handleLs(dst io.Writer, curDir string) {
 
 
 // Handle cd operation
-func handleCd(dst io.Writer, dir string, curDir *string) {
-	if dir[:2] == "C:" || dir[:2] == "D:" {
-		list, err := listFile(dir)
-		if err != nil {
-			sendLs(dst, []string{"Error, file not found."})
+func handleCd(dst io.Writer, dir string, curDir *string, root string) {
+	if dir == ".." {
+		if (*curDir) == root {
+			fmt.Fprintln(dst, "Illegal Path")
 		} else {
-			sendLs(dst, list)
-		}
-	} else {
-		if dir == ".." {
 			for i := len(*curDir)-1; i>=0; i-- {
 				if string((*curDir)[i]) == "\\" {
 					*curDir = (*curDir)[:i]
 					break
 				}
 			}
-			//handleLs(dst, *curDir)
-		} else if dir == "." {
-			//handleLs(dst, *curDir)
-		} else {
-			path := (*curDir) + "\\" + dir
-			_, err := listFile(path)
-			if err != nil {
-				sendLs(dst, []string{"Error, directory not found."})
-			} else {
-				(*curDir) = (*curDir) + "\\" + dir
-			}
-			//handleLs(dst, *curDir)
 		}
+	} else {
+		path := (*curDir) + "\\" + dir
+		_, err := listFile(path)
+		if err != nil {
+			sendLs(dst, []string{"Error, directory not found."})
+		} else {
+			(*curDir) = (*curDir) + "\\" + dir
+		}
+	}
+	if flag := len(*curDir)==len(root); flag {
+		fmt.Fprintln(dst, "Current Path: ", "\\")
+	} else {
+		fmt.Fprintln(dst, "Current Path: ", (*curDir)[len(root):])
 	}
 }
 
