@@ -10,6 +10,7 @@ type IntSet struct {
 }
 
 const base = 32 << (^uint(0) >> 63)
+
 var pc [256]byte
 
 func init() {
@@ -33,7 +34,7 @@ func (s *IntSet) Add(x int) {
 }
 
 //Add a slice of the non-negative value to the set
-func (s *IntSet)AddAll(words ...int) {
+func (s *IntSet) AddAll(words ...int) {
 	for _, i := range words {
 		s.Add(i)
 	}
@@ -65,14 +66,14 @@ func (s *IntSet) UnionWith(t *IntSet) {
 //DifferenceWith sets s to the difference of s and t
 func (s *IntSet) DifferenceWith(t *IntSet) {
 	for i, tword := range t.words {
-		if i < len(s.words){
-			s.words[i] ^= s.words[i]&tword
+		if i < len(s.words) {
+			s.words[i] ^= s.words[i] & tword
 		}
 	}
 }
 func (s *IntSet) SymmetricDifference(t *IntSet) {
 	var s1 IntSet
-	for _, v := range s.words{
+	for _, v := range s.words {
 		s1.words = append(s1.words, v)
 	}
 	s.UnionWith(t)
@@ -115,7 +116,7 @@ func (s *IntSet) Remove(x int) {
 	if word >= len(s.words) {
 		fmt.Printf("Error, there is not element %v\n", x)
 	} else {
-		s.words[word] ^= (1<<bit)
+		s.words[word] ^= (1 << bit)
 	}
 }
 
@@ -136,7 +137,7 @@ func (s *IntSet) Copy() *IntSet {
 
 //count the number of 1 in uint element
 func popCount(x uint) int {
-	return  int(pc[byte(x>>(0*8))] +
+	return int(pc[byte(x>>(0*8))] +
 		pc[byte(x>>(1*8))] +
 		pc[byte(x>>(2*8))] +
 		pc[byte(x>>(3*8))] +
